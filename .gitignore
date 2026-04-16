@@ -1,0 +1,16 @@
+# secrets — keep out of version control
+.mcp.json
+.env
+.env.local
+.env.*.local
+
+# dependencies
+node_modules/
+
+# build output
+.next/
+dist/
+out/
+
+# misc
+.DS_Store
