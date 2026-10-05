@@ -1,0 +1,461 @@
+/* ================================================================== */
+/* Hero: the mosaic headline and its introduction                      */
+/* ================================================================== */
+
+.hero {
+  position: relative;
+  min-height: 100svh;
+  container-type: inline-size;
+  --pad-top: clamp(16px, 4svh, 48px);
+  --pad-bottom: 24px;
+  /* Room kept below the mosaic for the stacked introduction text. */
+  --meta-reserve: 200px;
+  padding-top: calc(var(--nav-h) + var(--pad-top));
+  padding-bottom: var(--pad-bottom);
+  overflow: clip;
+}
+@media (min-width: 640px) { .hero { --meta-reserve: 190px; } }
+@media (min-width: 768px) { .hero { --pad-bottom: 56px; } }
+@media (min-width: 1024px) { .hero { --meta-reserve: 124px; } }
+@media (min-width: 768px) and (max-height: 760px) { .hero { --pad-bottom: 32px; } }
+@media (max-height: 560px) { .hero { --meta-reserve: 0px; --pad-bottom: 24px; } }
+@media (min-width: 768px) and (min-height: 761px) { .hero { --pad-bottom: 88px; } } /* room for the scroll cue */
+@media (min-width: 1220px) and (min-height: 700px) { .hero:not(.hero--long-lead) { --meta-reserve: 0px; } }
+
+/*
+ * Mosaic geometry, computed once in pure CSS from the viewport so it is known before
+ * any script or font loads (the intro measures it, so it must never move):
+ *   --p  pitch (cell + gap), whole pixels, 8–40px
+ *   --g  gap, ~12% of the pitch
+ *   --s  tile size
+ * --cols / --rows come from the board (set inline by the Hero).
+ */
+.hero-stack {
+  --wc: min(100cqw - 2 * var(--gutter), 1200px);
+  --ah: calc(100svh - var(--nav-h) - var(--pad-top) - var(--pad-bottom) - var(--meta-reserve));
+  --p: clamp(8px, round(down, min(var(--wc) / var(--cols), var(--ah) / var(--rows)) + 0.02px, 1px), 40px);
+  --g: max(1px, round(var(--p) * 0.12, 1px));
+  --s: calc(var(--p) - var(--g));
+  width: var(--wc);
+  margin-inline: auto;
+}
+@supports not (width: 1cqw) {
+  .hero-stack { --wc: min(100vw - 2 * var(--gutter), 1200px); }
+}
+@supports not (width: round(down, 10.5px, 1px)) {
+  .hero-stack {
+    --p: clamp(8px, min(var(--wc) / var(--cols), var(--ah) / var(--rows)), 40px);
+    --g: max(1px, calc(var(--p) * 0.12));
+  }
+}
+
+.mosaic-wrap {
+  position: relative;
+  width: calc(var(--cols) * var(--p) - var(--g));
+  margin-top: max(0px, (var(--ah) - (var(--rows) * var(--p) - var(--g))) / 2);
+}
+
+.hero-title {
+  margin: 0;
+  font: inherit;
+}
+
+.mosaic {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(var(--cols), var(--s));
+  grid-template-rows: repeat(var(--rows), var(--s));
+  gap: var(--g);
+  width: calc(var(--cols) * var(--p) - var(--g));
+  height: calc(var(--rows) * var(--p) - var(--g));
+  transform-origin: 50% 50%;
+}
+
+.tile {
+  position: relative;
+  display: block;
+  overflow: hidden;
+  border-radius: calc(var(--s) * 0.06);
+  background: var(--color-sand);
+  box-shadow: 0 calc(var(--s) * 0.03) calc(var(--s) * 0.09) rgb(var(--shadow-rgb) / 0.2);
+}
+.tile--period {
+  border-radius: calc((2 * var(--s) + var(--g)) * 0.06);
+  box-shadow: 0 calc((2 * var(--s) + var(--g)) * 0.03) calc((2 * var(--s) + var(--g)) * 0.09) rgb(var(--shadow-rgb) / 0.2);
+}
+.tile img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+/* Landing effects layered over the mosaic (clipped to it). */
+.mosaic-fx {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+.mosaic-ripple {
+  position: absolute;
+  left: calc(var(--pcx) * var(--p) - var(--g) / 2);
+  top: calc(var(--pcy) * var(--p) - var(--g) / 2);
+  width: calc(var(--cols) * var(--p) * 2.4);
+  aspect-ratio: 1;
+  translate: -50% -50%;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, transparent 72%, rgb(255 251 243 / 0.55) 86%, transparent 100%);
+  opacity: 0;
+  scale: 0;
+}
+.mosaic-sheen > span {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -100%;
+  width: 300%;
+  background: linear-gradient(104deg, transparent 45%, rgb(255 251 243 / 0.34) 50%, transparent 55%);
+  translate: -36% 0;
+  opacity: 0;
+}
+
+/* ---------------------------------------------------------------- */
+/* Introduction text                                                 */
+/* ---------------------------------------------------------------- */
+
+.hero-meta--notch {
+  display: none;
+}
+.hero-meta--stacked {
+  margin-top: 32px;
+  width: min(100%, calc(var(--cols) * var(--p) - var(--g)));
+  display: grid;
+  gap: 16px;
+}
+.hero-ctas {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+@media (min-width: 1024px) {
+  .hero-meta--stacked {
+    width: 100%;
+    grid-template-columns: minmax(0, 0.7fr) minmax(0, 1.6fr) auto;
+    align-items: start;
+    gap: 32px;
+  }
+}
+/* Wide and tall enough: tuck the introduction into the empty space right of "Meet"
+   (board columns 20–27, rows 0–6). A long lead (.hero--long-lead, set by the Hero)
+   keeps the stacked layout so no text is ever cut off. */
+@media (min-width: 1220px) and (min-height: 700px) {
+  .hero:not(.hero--long-lead) .hero-meta--stacked {
+    display: none;
+  }
+  .hero:not(.hero--long-lead) .hero-meta--notch {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    position: absolute;
+    top: 0;
+    left: calc(20 * var(--p));
+    width: calc(8 * var(--p) - var(--g));
+    height: calc(7 * var(--p) - var(--g));
+    padding-left: calc(0.5 * var(--p));
+  }
+  .hero-lead {
+    display: -webkit-box;
+    -webkit-line-clamp: 5;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+}
+
+.scroll-cue {
+  position: absolute;
+  left: 50%;
+  bottom: 20px;
+  transform: translateX(-50%);
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+}
+@media (min-width: 768px) and (min-height: 761px) {
+  .scroll-cue { display: flex; }
+}
+.scroll-cue-line {
+  position: relative;
+  width: 1px;
+  height: 28px;
+  overflow: hidden;
+  background: var(--color-tan);
+}
+.scroll-cue-line::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 1px;
+  height: 40%;
+  background: var(--color-ink);
+  translate: 0 -100%;
+}
+@media (prefers-reduced-motion: no-preference) {
+  /* Starts once the cue is revealed, so intro viewers see it too. */
+  html:not([data-intro="pending"]):not([data-intro="running"]) .scroll-cue-line::after {
+    animation: cue-travel 2.4s var(--ease-inout) 1.2s 3;
+  }
+}
+@keyframes cue-travel {
+  to { translate: 0 250%; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .scroll-cue-line::after { translate: 0 75%; }
+}
+
+/* ================================================================== */
+/* Intro states (data-intro on <html>, set by the gate script)         */
+/* ================================================================== */
+
+html:is([data-intro="pending"], [data-intro="running"]) {
+  overflow: hidden;
+}
+/* Everything below the hero is out of reach (and out of the tab order) until it ends. */
+html:is([data-intro="pending"], [data-intro="running"]) [data-intro-inert]:not([data-reveal]) {
+  visibility: hidden;
+}
+/* Before a tile's print lands, its static tile stays hidden. */
+html[data-intro="pending"] .mosaic .tile,
+html[data-intro="running"] .mosaic .tile:not([data-on]) {
+  visibility: hidden;
+}
+
+/* UI hidden during the intro, revealed when it finishes. */
+[data-reveal] {
+  transition:
+    opacity 400ms var(--ease-out),
+    translate 400ms var(--ease-out),
+    visibility 0s linear 400ms;
+}
+[data-reveal-item] {
+  transition:
+    opacity 400ms var(--ease-out),
+    translate 400ms var(--ease-out);
+}
+html:is([data-intro="pending"], [data-intro="running"]) [data-reveal] {
+  opacity: 0;
+  visibility: hidden;
+}
+html:is([data-intro="pending"], [data-intro="running"]) [data-reveal="nav"] {
+  translate: 0 -8px;
+}
+html:is([data-intro="pending"], [data-intro="running"]) [data-reveal-item] {
+  opacity: 0;
+  translate: 0 12px;
+}
+html[data-intro="done"] [data-reveal] {
+  transition:
+    opacity 700ms var(--ease-out),
+    translate 700ms var(--ease-out),
+    visibility 0s;
+}
+html[data-intro="done"] [data-reveal="cue"] {
+  transition-delay: 500ms;
+}
+/* The nav also fades its own surface in and out as the page scrolls. */
+[data-reveal="nav"] {
+  transition:
+    opacity 400ms var(--ease-out),
+    translate 400ms var(--ease-out),
+    visibility 0s linear 400ms,
+    background-color 240ms var(--ease-out),
+    border-color 240ms var(--ease-out);
+}
+html[data-intro="done"] [data-reveal="nav"] {
+  transition:
+    opacity 700ms var(--ease-out),
+    translate 700ms var(--ease-out),
+    visibility 0s,
+    background-color 240ms var(--ease-out),
+    border-color 240ms var(--ease-out);
+}
+html[data-intro="done"] [data-reveal-item] {
+  transition:
+    opacity 700ms var(--ease-out) calc(120ms + var(--i, 0) * 90ms),
+    translate 800ms var(--ease-out) calc(120ms + var(--i, 0) * 90ms);
+}
+
+/* Reduced motion: no flight, just a quiet opacity cascade. */
+html[data-intro="reduced"] .mosaic .tile {
+  animation: intro-tile-in 380ms ease-out both;
+  animation-delay: calc(120ms + var(--o) * 7ms);
+}
+html[data-intro="reduced"] [data-reveal] {
+  animation: intro-fade-in 500ms ease-out both;
+  animation-delay: 900ms;
+}
+@keyframes intro-tile-in {
+  from { opacity: 0; }
+}
+@keyframes intro-fade-in {
+  from { opacity: 0; }
+}
+
+/* The full stop lands: a ripple of light and a small lift travel through the word. */
+html[data-ripple] .mosaic .tile {
+  animation: intro-tile-ripple 460ms var(--ease-out) both;
+  animation-delay: calc(var(--d) * 13ms);
+}
+html[data-ripple] .mosaic-ripple {
+  animation: intro-ripple-ring 1000ms cubic-bezier(0.2, 0.7, 0.3, 1) both;
+}
+@keyframes intro-tile-ripple {
+  0% { scale: 1; }
+  28% { scale: 1.075; }
+  100% { scale: 1; }
+}
+@keyframes intro-ripple-ring {
+  0% { scale: 0.02; opacity: 0.9; }
+  100% { scale: 1; opacity: 0; }
+}
+
+/* A single sheen of light across the finished word. */
+html[data-sheen] .mosaic-sheen > span {
+  animation: intro-sheen 1150ms cubic-bezier(0.35, 0, 0.25, 1) both;
+}
+@keyframes intro-sheen {
+  0% { translate: -36% 0; opacity: 1; }
+  100% { translate: 36% 0; opacity: 1; }
+}
+
+/* Skip button: only while the intro can still be skipped. */
+.intro-skip {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  z-index: 45;
+  display: none;
+  align-items: center;
+  gap: 10px;
+  height: 40px;
+  padding-inline: 16px;
+  border-radius: 999px;
+  border: 1px solid var(--color-line-strong);
+  background: var(--color-paper-raised);
+  color: var(--color-ink);
+  overflow: hidden;
+}
+.intro-skip:hover { background: var(--color-sand); }
+.intro-skip-progress {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 1px;
+  background: var(--color-clay);
+  transform-origin: 0 50%;
+  scale: 0 1;
+}
+html:is([data-intro="pending"], [data-intro="running"]) .intro-skip {
+  display: inline-flex;
+  animation: intro-skip-in 400ms var(--ease-out) 700ms both;
+}
+@keyframes intro-skip-in {
+  from { opacity: 0; translate: 0 6px; }
+}
+@media (max-width: 639px) {
+  .intro-skip { right: 16px; bottom: 16px; }
+}
+@media (pointer: coarse) {
+  .intro-skip { height: 44px; }
+  .intro-skip .kbd-hint { display: none; }
+}
+
+/* ---------------------------------------------------------------- */
+/* The stage the prints fly on (built by the intro engine)           */
+/* ---------------------------------------------------------------- */
+
+#intro-stage {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  pointer-events: none;
+  overflow: hidden;
+  contain: strict;
+}
+#intro-stage .layer {
+  position: absolute;
+  inset: 0;
+}
+#intro-stage .cam {
+  position: absolute;
+  width: 0;
+  height: 0;
+  transform-style: preserve-3d;
+}
+#intro-stage .ft {
+  position: absolute;
+  overflow: hidden;
+  border-radius: 6%;
+  background: var(--color-sand);
+  will-change: transform, opacity;
+}
+#intro-stage .ft img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+/* Loose prints get a thin paper mat so they read as photographs. */
+#intro-stage .ft.mat::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow: inset 0 0 0 var(--mat, 4px) #fcfaf6;
+}
+#intro-stage .sh {
+  position: absolute;
+  left: -16px;
+  top: -16px;
+  width: 32px;
+  height: 32px;
+  border-radius: 30%;
+  background: radial-gradient(closest-side, rgb(var(--shadow-rgb) / 0.55), rgb(var(--shadow-rgb) / 0.22) 58%, rgb(var(--shadow-rgb) / 0));
+  will-change: transform, opacity;
+}
+
+/* Forced colours and print: show the headline as text. */
+@media (forced-colors: active), print {
+  .mosaic,
+  #intro-stage,
+  .intro-skip,
+  .scroll-cue,
+  [data-intro-replay] {
+    display: none !important;
+  }
+  .hero-title .sr-only {
+    position: static;
+    width: auto;
+    height: auto;
+    margin: 0;
+    padding: 0;
+    overflow: visible;
+    clip: auto;
+    clip-path: none;
+    white-space: normal;
+    font-family: var(--font-display);
+    font-weight: 300;
+    font-size: clamp(2.5rem, 1.6rem + 3.2vw, 4.25rem);
+    line-height: 1.04;
+  }
+}
+@media print {
+  [data-reveal="nav"] { position: absolute; }
+}
